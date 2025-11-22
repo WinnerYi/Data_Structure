@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-
+//hahaha
 void PrintTitle();
 
 class Queue {
@@ -149,12 +149,14 @@ void Queue::dequeue(Coordinate& queueFront){
 
 void PrintTitle () {
   std::cout << "*** (^_^) Data Structure (^o^) ***\n";
-  std::cout << "*** Find the Goal(s) in a Maze ***\n";
+  std::cout << "** Simulate FIFO Queues by SQF ***\n";
   std::cout << "* 0. Quit                        *\n";
-  std::cout << "* 1. Find one goal               *\n";
-  std::cout << "* 2. Find goal(s) as requested   *\n";
-  std::cout << "* 3. How many goals?             *\n";    
-  std::cout << "* 4. Shortest path to one goal   *\n";
+  std::cout << "* 1. Sort a file                 *\n";
+  std::cout << "* 2. Simulate one FIFO queue     *\n";
+  std::cout << "* 3. Simulate two queues by SQF  *\n";    
+  std::cout << "* 4. Simulate some queues by SQF *\n";
   std::cout << "**********************************\n";
   std::cout << "Input a command(0, 1, 2, 3, 4): ";
 } 
+
+
