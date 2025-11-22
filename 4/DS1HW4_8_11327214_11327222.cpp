@@ -4,6 +4,9 @@
 #include <fstream>
 //hahaha
 void PrintTitle();
+void SkipSpace(std::string &str);
+std::string ReadInput();
+bool isNonNegInt (std::string s);
 
 class Queue {
  private: 
@@ -25,9 +28,7 @@ class Queue {
 }; 
 
 int main() {
-  Maze maze1; // for task1, 2, 3
-  Maze maze4; // for task4
-  bool maze1_is_empty = true;
+  
   while (true) {
     PrintTitle();
     std::string cmd = ReadInput();
@@ -35,39 +36,13 @@ int main() {
     if (cmd == "0") {
       return 0;
     } else if (cmd == "1") {
-      std::cout << std::endl;
-      if (!maze1_is_empty) {
-        maze1.deleteMaze();
-        maze1_is_empty = true;
-      }
-      if (maze1.fetchFile()) {
-        maze1_is_empty = false;
-        maze1.taskOne();
-      }
-      continue;
+      
     } else if (cmd == "2") {
-      std::cout << std::endl;
-      if (!maze1_is_empty) {
-        maze1.taskTwo();
-      } else {
-        std::cout << "### Execute command 1 to load a maze! ###\n";
-      }
-      std::cout << std::endl;
-      continue;
+  
     } else if (cmd == "3") {
-      if (!maze1_is_empty) {
-        maze1.taskThree();
-        continue;
-      } else {
-        std::cout << "\n### Execute command 1 to load a maze! ###\n";
-      }
+     
     } else if (cmd == "4") {
-      std::cout << std::endl;
-      if (maze4.fetchFile()) {
-        maze4.taskFour();
-        maze4.deleteMaze();
-      } 
-      continue;
+      
     } else {
       printf("\n");
       std::cout << "Command does not exist!\n";
@@ -146,6 +121,49 @@ void Queue::dequeue(Coordinate& queueFront){
     queueFront = frontPtr->coordinate_item;
     dequeue();
 } 
+
+std::string ReadInput() {
+  std::string input;
+  while (1) {
+    std::getline(std::cin, input);
+    SkipSpace(input);
+    if (input.empty()) continue;
+    else break;
+  }
+  return input;
+}
+bool isNonNegInt (std::string s) {
+  bool hasDigit = false;
+  int i = 0;
+  if (s[i] == '+') {
+    i++;
+    if (s.size() == 1) return false; // 單獨一個符號不行
+  }
+  for (; i < s.size(); i++) {
+    if (s[i] >= '0' && s[i] <= '9') {
+       hasDigit = true; // 至少有一個數字
+    }  else return false; // 任何其他字元都不允許
+        
+  }
+    // 最後要至少有一個數字
+  return hasDigit;
+}
+
+void SkipSpace(std::string &str) {
+  for (int i = 0; i < str.size(); i++) {
+    if (str[i] != ' ') break;
+    if (str[i] == ' ') {
+      str.erase(str.begin() + i);
+      i--;
+    }
+  }
+  for (int i = str.size()-1; i >= 0; i--) {
+    if (str[i] != ' ') break;
+    if (str[i] == ' ') {
+      str.erase(str.begin() + i);
+    }
+  }
+}
 
 void PrintTitle () {
   std::cout << "*** (^_^) Data Structure (^o^) ***\n";
