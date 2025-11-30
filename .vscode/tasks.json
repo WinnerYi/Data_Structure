@@ -1,9 +1,30 @@
 {
+    "version": "2.0.0",
     "tasks": [
         {
+            "label": "Build all C++ files",
+            "type": "shell",
+            "command": "/usr/bin/clang++",
+            "args": [
+                "-std=c++14",
+                "-g",
+                "${workspaceFolder}/**/*.cpp",
+                "-o",
+                "${workspaceFolder}/build/output"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Compile all C++ files in project recursively"
+        },
+        {
             "type": "cppbuild",
-            "label": "C/C++: clang 建置使用中檔案",
-            "command": "/usr/bin/clang",
+            "label": "C/C++: clang++ 建置使用中檔案",
+            "command": "/usr/bin/clang++",
             "args": [
                 "-fcolor-diagnostics",
                 "-fansi-escape-codes",
@@ -24,6 +45,5 @@
             },
             "detail": "偵錯工具產生的工作。"
         }
-    ],
-    "version": "2.0.0"
+    ]
 }

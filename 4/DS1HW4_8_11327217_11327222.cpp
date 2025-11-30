@@ -4,29 +4,13 @@
 #include <fstream>
 #include <vector>
 #include <chrono> // count time
+#include <iomanip>
 void PrintTitle();
 void SkipSpace(std::string &str);
 std::string ReadInput();
 bool isNonNegInt (std::string s);
-/*
-class Queue {
- private: 
-  struct QueueNode {
-   Coordinate coordinate_item;
-   QueueNode *next;
-  }; // end QueueNode
-  QueueNode *backPtr;
-  QueueNode *frontPtr;
- public: 
-  Queue(); // Constructors and destructor
-  Queue(const Queue& Q);
-  ~Queue();
-  bool isEmpty() const; // Queue operations
-  void enqueue(const Coordinate& newItem);
-  void dequeue();
-  void dequeue(Coordinate& queueFront);
-  void getFront(Coordinate& queueFront) const;
-}; */
+
+
 
 class Order {
  private:
@@ -34,9 +18,9 @@ class Order {
   int arrival;
   int duration;
   int timeout;
-public:
- Order() {}
- ~Order() {}
+ public:
+  Order() {}
+  ~Order() {}
  void setOrder(int oid, int arrival, int duration, int timeout) {
    this->oid = oid;
    this->arrival = arrival;
@@ -63,46 +47,103 @@ int getOid() {
               << "\t" << timeout << std::endl;
     }
 };
-class AbortTimeOut {
- private:
-  std::vector<Order> sorted_orders;
-  std::string filNum;
-  std::string title;
-  int total_order = 0;
-  long long writing_data_time = 0;
-  long long sorting_data_time = 0;
-  long long reading_data_time = 0;
- public:
-  AbortTimeOut() {}
-  ~AbortTimeOut () {}
-  bool fetchFile() {
-    auto start = std::chrono::high_resolution_clock::now();
-    std::ifstream in;
-    std:: cout << "Input a file number (e.g., 401, 402, 403, ...): ";
-    std::string file_num = ReadInput();
-    std::string txt_path = "sorted" + file_num + ".txt";
-    in.open(txt_path);
-    if(in.fail()){ 
-      std::cout << std::endl << txt_path + " does not exist!\n" << std::endl;
-      return false; 
-    }
-    filNum = file_num;
-    std::getline(in, title);
-    int oid, arrival, duration, timeout;
-    while (in >> oid >> arrival >> duration >> timeout) {
-      Order o;
-      o.setOrder(oid, arrival, duration, timeout);
-      sorted_orders.push_back(o);
-      total_order++;
-    }       
-    in.close();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    reading_data_time = time.count();
-    return true;
-  }
 
+class AbortOrder {
+ private:
+  int oid;
+  int cid = 0;
+  int delay;
+  int abort;
+public:
+ AbortOrder(int oid, int cid, int delay, int abort) {
+   this->oid = oid;
+   this->cid = cid;
+   this->delay = delay;
+   this->abort = abort;
+ }
+ ~AbortOrder() {}
+ void setOrder(int oid, int cid, int delay, int abort) {
+   this->oid = oid;
+   this->cid = cid;
+   this->delay = delay;
+   this->abort = abort; 
+ }
+int getOid() {
+   return oid;
+ }
+ int getCid() {
+   return cid;
+ }
+ int getDelay() {
+   return delay;
+ }
+ int getAbort() {
+   return abort;
+ }
 };
+
+class TimeOutOrder {
+ private:
+  int oid;
+  int cid = 0;
+  int delay;
+  int departure;
+public:
+ TimeOutOrder(int oid, int cid, int delay, int departure) {
+    this->oid = oid;
+    this->cid = cid;
+    this->delay = delay;
+    this->departure = departure;
+ }
+
+ ~TimeOutOrder() {}
+ void setOrder(int oid, int cid, int delay, int departure) {
+   this->oid = oid;
+   this->cid = cid;
+   this->delay = delay;
+   this->departure = departure; 
+ }
+int getOid() {
+   return oid;
+ }
+ int getCid() {
+   return cid;
+ }
+ int getDelay() {
+   return delay;
+ }
+ int getDeparture() {
+   return departure;
+ }
+};
+
+class Queue {
+ private: 
+  struct QueueNode {
+   Order order_item;
+   QueueNode *next;
+  }; // end QueueNode
+  QueueNode *backPtr;
+  QueueNode *frontPtr;
+ public: 
+  Queue(); // Constructors and destructor
+  Queue(const Queue& Q);
+  ~Queue();
+  bool isEmpty() const; // Queue operations
+  void enqueue(const Order& newItem);
+  void dequeue();
+  void dequeue(Order& queueFront);
+  void getFront(Order& queueFront) const;
+  int size();
+}; 
+
+struct Chef {
+    Queue q;
+    int idle_time = 0;
+};
+
+
+
 
 class Goods {
  private:
@@ -155,17 +196,20 @@ class Goods {
     return true;
   }
 
-  void ShellSort() {// 希爾
+  void ShellSort() { // 希爾排序，先依 Arrival 再依 OID
     auto start = std::chrono::high_resolution_clock::now();
     int gap = total_order / 2;
 
     for (; gap > 0; gap /= 2) {
-        // 插入排序法（gap 間隔）
         for (int i = gap; i < total_order; i++) {
             Order tmp = orders[i];
             int j = i;
 
-            while (j >= gap && tmp.getArrival() < orders[j - gap].getArrival()) {
+            // 雙重比較：先 Arrival，再 OID
+            while (j >= gap && 
+              (tmp.getArrival() < orders[j - gap].getArrival() ||
+              (tmp.getArrival() == orders[j - gap].getArrival() && tmp.getOid() < orders[j - gap].getOid()))) 
+            {
                 orders[j] = orders[j - gap];
                 j -= gap;
             }
@@ -173,17 +217,19 @@ class Goods {
             orders[j] = tmp;
         }
     }
+
     auto end = std::chrono::high_resolution_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     sorting_data_time = time.count();
 }
 
 
+
   void OutputFile() {
     auto start = std::chrono::high_resolution_clock::now();
     std::string sorting_path = "sorted" + filNum + ".txt";
      std::ofstream outputFile(sorting_path);
-     outputFile << title << "\n";
+     outputFile <<"OID\tArrival\tDuration\tTimeOut\n";
      for (int i = 0; i < total_order; i++) {
        outputFile << orders[i].getOid() << " " ;
        outputFile << orders[i].getArrival() << " " ;
@@ -216,17 +262,171 @@ class Goods {
     printf("\n");
     std::cout << "Writing data: " << writing_data_time << " us\n";
 
+  }
 
+};
 
+class CancelList {
+ private:
+  std::vector<Order> sorted_orders;
+  std::vector<AbortOrder> abort_orders; 
+  std::vector<TimeOutOrder> timeOut_orders;
+  std::string filNum;
+  std::string title;
+  int total_order = 0;
+  int total_delay = 0;
+ public:
+  CancelList () {}
+  ~CancelList () {
+    total_order = 0;
+    sorted_orders.clear();
+    sorted_orders.shrink_to_fit();
+  }
+  bool fetchFile() {
+    std::ifstream in;
+    std:: cout << "Input a file number (e.g., 401, 402, 403, ...): ";
+    std::string file_num = ReadInput();
+    std::string txt_path = "sorted" + file_num + ".txt";
+    in.open(txt_path);
+    if(in.fail()){ 
+      std::cout << std::endl << txt_path + " does not exist!\n" << std::endl;
+      return false; 
+    }
+    filNum = file_num;
+    std::getline(in, title);
+    int oid, arrival, duration, timeout;
+    while (in >> oid >> arrival >> duration >> timeout) {
+      Order o;
+      o.setOrder(oid, arrival, duration, timeout);
+      sorted_orders.push_back(o);
+      total_order++;
+    }       
+    in.close();
+    return true;
+  }
 
+  void OutputFile() {
+     std::string sorting_path = "one" + filNum + ".txt";
+     std::ofstream outputFile(sorting_path);
+     outputFile << std::fixed << std::setprecision(2);
+     outputFile <<  "\t[Abort List]\n";
+     outputFile << "\tOID\tCID\tDelay\tAbort\n";
+     for (int i = 0; i < abort_orders.size(); i++) {
+       outputFile << "[" << i+1 << "] ";
+       outputFile << "\t" << abort_orders[i].getOid();
+       outputFile << "\t" << abort_orders[i].getCid();
+       outputFile << "\t" << abort_orders[i].getDelay();
+       outputFile << "\t" << abort_orders[i].getAbort() << "\n";
+     }
+     outputFile <<  "\t[Timeout List]\n";
+     outputFile << "\tOID\tCID\tDelay\tDeparture\n";
+     for (int i = 0; i < timeOut_orders.size(); i++) {
+       outputFile << "[" << i+1 << "] ";
+       outputFile << "\t" << timeOut_orders[i].getOid() << " " ;
+       outputFile << "\t" << timeOut_orders[i].getCid() << " " ;
+       outputFile << "\t" << timeOut_orders[i].getDelay() << " " ;
+       outputFile << "\t" << timeOut_orders[i].getDeparture() << "\n";
+     }
+     outputFile <<  "[Total Delay]\n";
+     outputFile << total_delay << " min.\n";
+     outputFile << "[Failure Percentage]\n";
+  
+     double percentage = 100 * (double)(abort_orders.size() + timeOut_orders.size()) / (double)sorted_orders.size() ;
+     outputFile << percentage << "%" << std::endl;
 
   }
+
+ 
+
+  void printOrders() {
+        std::cout << "\t" <<title << std::endl;
+        for (int i = 0; i < total_order; i++) {
+          std::cout << "(" << i+1 << ")";
+          sorted_orders[i].print();
+        }
+  }
+
+  void processOrderFromQueue(Queue &q, int &idle_time) {
+    Order front;
+    q.dequeue(front);
+
+    int start = idle_time;
+
+    // --- 取出時逾時 → Abort ---
+    if (front.getTimeout() < start) {
+        int abort_time = start;
+        int delay = abort_time - front.getArrival();
+        abort_orders.push_back(AbortOrder(front.getOid(), 1, delay, abort_time));
+        total_delay += delay;
+        return;
+    }
+
+    // --- 做菜後才逾時 → Timeout ---
+    if (start + front.getDuration() > front.getTimeout()) {
+        int delay = start - front.getArrival();
+        idle_time += front.getDuration();
+        timeOut_orders.push_back(TimeOutOrder(front.getOid(), 1, delay, idle_time));
+        total_delay += delay;
+        return;
+    }
+
+    // --- 正常完成 ---
+    idle_time += front.getDuration();
+}
+void taskTwo() {
+    int idle_time = 0;
+    Queue q;
+
+    for (int i = 0; i < total_order; i++) {
+        Order &cur = sorted_orders[i];
+
+        // --- 不合理 → 直接取消 ---
+        if (cur.getDuration() <= 0 || cur.getArrival() + cur.getDuration() > cur.getTimeout()) {
+            sorted_orders.erase(sorted_orders.begin() + i);
+            i--;
+            total_order--;
+            continue;
+        }
+        int arrival = cur.getArrival();
+
+        // --- 若 queue 尚有舊訂單，且 idle_time 剛好等於 arrival → 先清舊單（耗時=0）---
+        
+            while (!q.isEmpty() && idle_time <= arrival) {
+                processOrderFromQueue(q, idle_time);
+            }
+            // 正常完成但耗時=0 → idle_time 不變
+        
+
+        // --- 若廚師空、未達 arrival → 跳到 arrival ---
+        if (q.isEmpty() && idle_time < arrival)
+            idle_time = arrival;
+
+        // --- Queue 滿 → 取消 ---
+        if (q.size() >= 3 && arrival < idle_time) {
+            abort_orders.push_back(AbortOrder(cur.getOid(), 0, 0, arrival));
+            
+        } else {
+          q.enqueue(cur);
+        }
+        // --- 廚師閒置 & queue 有訂單 → 處理舊訂單 ---
+       
+    }
+
+    // 處理 queue 中剩餘的訂單 
+    while (!q.isEmpty()) {
+        processOrderFromQueue(q, idle_time);
+    }
+    OutputFile();
+}
+
+
 
 };
 
 
 int main() {
   Goods goods;
+  bool has_command2 = false;
   while (true) {
     PrintTitle();
     std::string cmd = ReadInput();
@@ -239,12 +439,30 @@ int main() {
       if (goods.fetchFile()) {
         goods.taskOne();
       }
+      has_command2 = false;
       
     } else if (cmd == "2") {
+      printf("\n");
+      CancelList list;
+      if (list.fetchFile()) {
+        printf("\n");
+        list.printOrders();
+        list.taskTwo();
+      }
+      has_command2 = true;
+ 
   
     } else if (cmd == "3") {
+      if (!has_command2) {
+        std::cout << "\n### Execute command 2 first! ###\n\n";
+        continue;
+      }
      
     } else if (cmd == "4") {
+      if (!has_command2) {
+        std::cout << "\n### Execute command 2 first! ###\n\n";
+        continue;
+      }
       
     } else {
       printf("\n");
@@ -253,7 +471,6 @@ int main() {
     printf("\n");  
   }
 }
-/*
 
 Queue::Queue() {
   backPtr = NULL;   
@@ -275,9 +492,9 @@ bool Queue::isEmpty() const{
 }
 
 
-void Queue::enqueue(const Coordinate& newItem){
+void Queue::enqueue(const Order& newItem){
     QueueNode* newPtr = new QueueNode;  
-    newPtr->coordinate_item = newItem;              
+    newPtr->order_item = newItem;              
     newPtr->next = NULL;                 
 
     if (isEmpty()) {
@@ -312,20 +529,31 @@ void Queue::dequeue() {
     }
 }
 
-void Queue::getFront(Coordinate& queueFront) const {
+void Queue::getFront(Order& queueFront) const {
     if (isEmpty())
         throw std::runtime_error("Queue is empty, cannot dequeue.");
     // 否則，把前端節點的資料取出放進參數
-    queueFront = frontPtr->coordinate_item;
+    queueFront = frontPtr->order_item;
 }
 
-void Queue::dequeue(Coordinate& queueFront){
+void Queue::dequeue(Order& queueFront){
     if (isEmpty())
         throw std::runtime_error("Queue is empty, cannot dequeue.");
-    queueFront = frontPtr->coordinate_item;
+    queueFront = frontPtr->order_item;
     dequeue();
 } 
-*/
+
+int Queue::size() {
+  int count = 0;
+  QueueNode* current = frontPtr;
+  while (current != nullptr) {
+      count++;
+      current = current->next;
+  }
+  return count;
+  
+}
+
 std::string ReadInput() {
   std::string input;
   while (1) {
