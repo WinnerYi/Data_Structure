@@ -139,6 +139,7 @@ class Queue {
 
 struct Chef {
     Queue q;
+    int cid;
     int idle_time = 0;
 };
 
@@ -196,7 +197,7 @@ class Goods {
     return true;
   }
 
-  void ShellSort() { // 希爾排序，先依 Arrival 再依 OID
+  void ShellSort() { // 先 Arrival 再 OID
     auto start = std::chrono::high_resolution_clock::now();
     int gap = total_order / 2;
 
@@ -231,9 +232,9 @@ class Goods {
      std::ofstream outputFile(sorting_path);
      outputFile <<"OID\tArrival\tDuration\tTimeOut\n";
      for (int i = 0; i < total_order; i++) {
-       outputFile << orders[i].getOid() << " " ;
-       outputFile << orders[i].getArrival() << " " ;
-       outputFile << orders[i].getDuration() << " " ;
+       outputFile << orders[i].getOid() << "\t" ;
+       outputFile << orders[i].getArrival() << "\t" ;
+       outputFile << orders[i].getDuration() << "\t" ;
        outputFile << orders[i].getTimeout() << "\n";
      }
      auto end = std::chrono::high_resolution_clock::now();
@@ -243,9 +244,9 @@ class Goods {
   }
 
   void printOrders() {
-        std::cout << "\t" <<title << std::endl;
+        std::cout << "\tOID\tArrival\tDuration\tTimeOut" << std::endl;
         for (int i = 0; i < total_order; i++) {
-          std::cout << "(" << i+1 << ")";
+          std::cout << "(" << i+1 << ") ";
           orders[i].print();
         }
   }
@@ -256,14 +257,13 @@ class Goods {
     printf("\n");
     ShellSort();
     OutputFile();
-    std::cout << "Reading data: " << reading_data_time << " us\n";
+    std::cout << "Reading data: " << reading_data_time << " us.\n";
     printf("\n");
-    std::cout << "Sorting data: " << sorting_data_time << " us\n";
+    std::cout << "Sorting data: " << sorting_data_time << " us.\n";
     printf("\n");
-    std::cout << "Writing data: " << writing_data_time << " us\n";
+    std::cout << "Writing data: " << writing_data_time << " us.\n";
 
   }
-
 };
 
 class CancelList {
@@ -282,6 +282,22 @@ class CancelList {
     sorted_orders.clear();
     sorted_orders.shrink_to_fit();
   }
+  void ResetSorted() {
+    sorted_orders.clear();
+    sorted_orders.shrink_to_fit();
+    total_order = 0;
+
+  }
+
+  void ResetCancel() {
+    total_delay = 0;
+    abort_orders.clear();
+    abort_orders.shrink_to_fit();
+
+    timeOut_orders.clear();
+    timeOut_orders.shrink_to_fit();
+
+  }
   bool fetchFile() {
     std::ifstream in;
     std:: cout << "Input a file number (e.g., 401, 402, 403, ...): ";
@@ -289,7 +305,7 @@ class CancelList {
     std::string txt_path = "sorted" + file_num + ".txt";
     in.open(txt_path);
     if(in.fail()){ 
-      std::cout << std::endl << txt_path + " does not exist!\n" << std::endl;
+      std::cout << std::endl << "### " << txt_path + " does not exist! ###" << std::endl;
       return false; 
     }
     filNum = file_num;
@@ -305,14 +321,22 @@ class CancelList {
     return true;
   }
 
-  void OutputFile() {
-     std::string sorting_path = "one" + filNum + ".txt";
+  void OutputFile(int chef_counts) {
+    std::string sorting_path;
+    if (chef_counts == 1) {
+      sorting_path = "one" + filNum + ".txt";
+    } else if (chef_counts == 2) {
+      sorting_path = "two" + filNum + ".txt";
+    } else {
+      sorting_path = "any" + filNum + ".txt";
+    }
+     
      std::ofstream outputFile(sorting_path);
      outputFile << std::fixed << std::setprecision(2);
      outputFile <<  "\t[Abort List]\n";
      outputFile << "\tOID\tCID\tDelay\tAbort\n";
      for (int i = 0; i < abort_orders.size(); i++) {
-       outputFile << "[" << i+1 << "] ";
+       outputFile << "[" << i+1 << "]";
        outputFile << "\t" << abort_orders[i].getOid();
        outputFile << "\t" << abort_orders[i].getCid();
        outputFile << "\t" << abort_orders[i].getDelay();
@@ -321,10 +345,10 @@ class CancelList {
      outputFile <<  "\t[Timeout List]\n";
      outputFile << "\tOID\tCID\tDelay\tDeparture\n";
      for (int i = 0; i < timeOut_orders.size(); i++) {
-       outputFile << "[" << i+1 << "] ";
-       outputFile << "\t" << timeOut_orders[i].getOid() << " " ;
-       outputFile << "\t" << timeOut_orders[i].getCid() << " " ;
-       outputFile << "\t" << timeOut_orders[i].getDelay() << " " ;
+       outputFile << "[" << i+1 << "]";
+       outputFile << "\t" << timeOut_orders[i].getOid();
+       outputFile << "\t" << timeOut_orders[i].getCid();
+       outputFile << "\t" << timeOut_orders[i].getDelay();
        outputFile << "\t" << timeOut_orders[i].getDeparture() << "\n";
      }
      outputFile <<  "[Total Delay]\n";
@@ -332,7 +356,7 @@ class CancelList {
      outputFile << "[Failure Percentage]\n";
   
      double percentage = 100 * (double)(abort_orders.size() + timeOut_orders.size()) / (double)sorted_orders.size() ;
-     outputFile << percentage << "%" << std::endl;
+     outputFile << percentage << " %" << std::endl;
 
   }
 
@@ -341,7 +365,7 @@ class CancelList {
   void printOrders() {
         std::cout << "\t" <<title << std::endl;
         for (int i = 0; i < total_order; i++) {
-          std::cout << "(" << i+1 << ")";
+          std::cout << "(" << i+1 << ") ";
           sorted_orders[i].print();
         }
   }
@@ -349,9 +373,7 @@ class CancelList {
   void processOrderFromQueue(Queue &q, int &idle_time) {
     Order front;
     q.dequeue(front);
-
     int start = idle_time;
-
     // --- 取出時逾時 → Abort ---
     if (front.getTimeout() < start) {
         int abort_time = start;
@@ -360,8 +382,7 @@ class CancelList {
         total_delay += delay;
         return;
     }
-
-    // --- 做菜後才逾時 → Timeout ---
+    // 做菜後才逾時 → Timeout
     if (start + front.getDuration() > front.getTimeout()) {
         int delay = start - front.getArrival();
         idle_time += front.getDuration();
@@ -370,7 +391,32 @@ class CancelList {
         return;
     }
 
-    // --- 正常完成 ---
+    // 正常完成 
+    idle_time += front.getDuration();
+}
+
+void processOrderFromQueue2(Queue &q, int cid, int &idle_time) {
+    Order front;
+    q.dequeue(front);
+    int start = idle_time;
+    // --- 取出時逾時 → Abort ---
+    if (front.getTimeout() < start) {
+        int abort_time = start;
+        int delay = abort_time - front.getArrival();
+        abort_orders.push_back(AbortOrder(front.getOid(), cid, delay, abort_time));
+        total_delay += delay;
+        return;
+    }
+    // 做菜後才逾時 → Timeout
+    if (start + front.getDuration() > front.getTimeout()) {
+        int delay = start - front.getArrival();
+        idle_time += front.getDuration();
+        timeOut_orders.push_back(TimeOutOrder(front.getOid(), cid, delay, idle_time));
+        total_delay += delay;
+        return;
+    }
+
+    // 正常完成 
     idle_time += front.getDuration();
 }
 void taskTwo() {
@@ -380,7 +426,7 @@ void taskTwo() {
     for (int i = 0; i < total_order; i++) {
         Order &cur = sorted_orders[i];
 
-        // --- 不合理 → 直接取消 ---
+        // 不合理  直接取消 
         if (cur.getDuration() <= 0 || cur.getArrival() + cur.getDuration() > cur.getTimeout()) {
             sorted_orders.erase(sorted_orders.begin() + i);
             i--;
@@ -389,35 +435,114 @@ void taskTwo() {
         }
         int arrival = cur.getArrival();
 
-        // --- 若 queue 尚有舊訂單，且 idle_time 剛好等於 arrival → 先清舊單（耗時=0）---
+        //  若 queue 尚有舊訂單，且 idle_time 剛好等於 arrival → 先清舊單（耗時=0）
         
-            while (!q.isEmpty() && idle_time <= arrival) {
-                processOrderFromQueue(q, idle_time);
-            }
+        while (!q.isEmpty() && idle_time <= arrival) {
+            processOrderFromQueue(q, idle_time);
+        }
             // 正常完成但耗時=0 → idle_time 不變
         
 
-        // --- 若廚師空、未達 arrival → 跳到 arrival ---
+        // 若廚師空、未達 arrival → 跳到 arrival 
         if (q.isEmpty() && idle_time < arrival)
             idle_time = arrival;
 
-        // --- Queue 滿 → 取消 ---
+        //  Queue 滿 -> abort
         if (q.size() >= 3 && arrival < idle_time) {
             abort_orders.push_back(AbortOrder(cur.getOid(), 0, 0, arrival));
             
         } else {
           q.enqueue(cur);
         }
-        // --- 廚師閒置 & queue 有訂單 → 處理舊訂單 ---
-       
     }
 
     // 處理 queue 中剩餘的訂單 
     while (!q.isEmpty()) {
         processOrderFromQueue(q, idle_time);
     }
-    OutputFile();
+    OutputFile(1);
 }
+
+void taskTwoMultiChef(int chef_count) {
+    Chef chef[chef_count];
+    for (int i = 0; i < chef_count; i++) {
+      chef[i].cid = i+1;
+    }
+
+    for (int i = 0; i < total_order; i++) {
+        Order &cur = sorted_orders[i];
+        //  不合理 → 直接取消 
+        if (cur.getDuration() <= 0 || cur.getArrival() + cur.getDuration() > cur.getTimeout()) {
+            sorted_orders.erase(sorted_orders.begin() + i);
+            i--;
+            total_order--;
+            continue;
+        }
+        int arrival = cur.getArrival();
+        //  (Case 1 / Case 2) 找「閒置廚師」 idle <= arrival && queue empty
+
+    
+        for (int i = 0; i < chef_count; i++) {
+          while (!chef[i].q.isEmpty() && chef[i].idle_time <= arrival) {
+            processOrderFromQueue2(chef[i].q, chef[i].cid, chef[i].idle_time);
+          }
+        }
+
+  // 若廚師空、未達 arrival → 跳到 arrival 
+        int target = -1;
+
+        // Case1 / Case2：找 idle_time ≤ arrival 且 queue 空的廚師
+        std::vector<int> idle_list;
+        for (int c = 0; c < chef_count; c++) {
+            if (chef[c].idle_time <= arrival && chef[c].q.size() == 0) {
+                idle_list.push_back(c);
+            }
+        }
+
+        if (idle_list.size() == 1) {
+            target = idle_list[0]; // 唯一閒置
+        }
+        else if (idle_list.size() > 1) {
+            target = idle_list[0]; // 多個閒置 → 選編號最小
+        }
+        else {
+            // Case3：沒有閒置廚師 → 選 queue 最短的（且 < 3）
+            int best_len = 999999;
+            for (int c = 0; c < chef_count; c++) {
+                int len = chef[c].q.size();
+                if (len < best_len && len < 3) {
+                    best_len = len;
+                    target = c;
+                }
+            }
+
+            // Case4：全部 queue 都滿 → abort
+            if (target == -1) {
+                abort_orders.push_back(AbortOrder(cur.getOid(), 0, 0, arrival));
+                continue;
+            }
+        }
+
+        // -------------------------------------------
+        // Step 3：把訂單丟給 target 廚師
+        // -------------------------------------------
+        chef[target].q.enqueue(cur);
+
+        // 若該廚師是空的而且 idle_time < arrival → 推進時間
+        if (chef[target].q.size() == 1 && chef[target].idle_time < arrival) {
+            chef[target].idle_time = arrival;
+        }
+    }
+
+    // 處理 queue 中剩餘的訂單 
+    for (int i = 0; i < chef_count; i++) {
+      while (!chef[i].q.isEmpty()) {
+          processOrderFromQueue2(chef[i].q, chef[i].cid, chef[i].idle_time);
+      }
+    }
+    OutputFile(chef_count);
+}
+
 
 
 
@@ -426,44 +551,63 @@ void taskTwo() {
 
 int main() {
   Goods goods;
+  CancelList list;
   bool has_command2 = false;
   while (true) {
     PrintTitle();
-    std::string cmd = ReadInput();
-    
-    if (cmd == "0") {
+    int cmd;
+    std::cin >> cmd;
+    if (std::cin.fail()) { // 檢查輸入是否失敗
+        std::cin.clear();              // 清除錯誤標誌
+        std::cin.ignore(10000, '\n');  // 忽略錯誤輸入
+        return 0;
+    } else if (cmd == 0 ){
       return 0;
-    } else if (cmd == "1") {
+    } else if (cmd == 1) {
       printf("\n");
       goods.ResetGoods();
       if (goods.fetchFile()) {
         goods.taskOne();
       }
       has_command2 = false;
+      list.ResetSorted();
       
-    } else if (cmd == "2") {
+    } else if (cmd == 2) {
       printf("\n");
-      CancelList list;
+      if (has_command2) {
+        list.ResetSorted();
+      }
       if (list.fetchFile()) {
         printf("\n");
         list.printOrders();
         list.taskTwo();
-      }
-      has_command2 = true;
- 
-  
-    } else if (cmd == "3") {
-      if (!has_command2) {
-        std::cout << "\n### Execute command 2 first! ###\n\n";
-        continue;
-      }
-     
-    } else if (cmd == "4") {
-      if (!has_command2) {
-        std::cout << "\n### Execute command 2 first! ###\n\n";
-        continue;
+        has_command2 = true;
       }
       
+      list.ResetCancel();
+ 
+  
+    } else if (cmd == 3) {
+   
+      if (!has_command2) {
+        std::cout << "\n### Execute command 2 first! ###\n\n";
+        continue;
+      }
+      list.taskTwoMultiChef(2);
+      list.ResetCancel();
+     
+    } else if (cmd == 4) {
+     
+      if (!has_command2) {
+        std::cout << "\n### Execute command 2 first! ###\n\n";
+        continue;
+      }
+      printf("\n");
+      std::cout << "Input the number of queues: ";
+      int num;
+      std::cin >> num;
+      list.taskTwoMultiChef(num);
+      list.ResetCancel();
     } else {
       printf("\n");
       std::cout << "Command does not exist!\n";
@@ -475,6 +619,14 @@ int main() {
 Queue::Queue() {
   backPtr = NULL;   
   frontPtr = NULL;  
+}
+
+Queue::Queue(const Queue& Q) : frontPtr(nullptr), backPtr(nullptr) {
+    QueueNode* curr = Q.frontPtr;
+    while (curr != nullptr) {
+        enqueue(curr->order_item);
+        curr = curr->next;
+    }
 }
 
 Queue::~Queue() {
@@ -532,7 +684,6 @@ void Queue::dequeue() {
 void Queue::getFront(Order& queueFront) const {
     if (isEmpty())
         throw std::runtime_error("Queue is empty, cannot dequeue.");
-    // 否則，把前端節點的資料取出放進參數
     queueFront = frontPtr->order_item;
 }
 
