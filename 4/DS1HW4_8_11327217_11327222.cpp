@@ -5,6 +5,7 @@
 #include <vector>
 #include <chrono> // count time
 #include <iomanip>
+#include <climits>
 void PrintTitle();
 void SkipSpace(std::string &str);
 std::string ReadInput();
@@ -178,7 +179,7 @@ class Goods {
     std::string txt_path = "input" + file_num + ".txt";
     in.open(txt_path);
     if(in.fail()){ 
-      std::cout << std::endl << txt_path + " does not exist!\n" << std::endl;
+      std::cout << std::endl << "### " << txt_path + " does not exist! ###" << std::endl;
       return false; 
     }
     filNum = file_num;
@@ -410,7 +411,7 @@ void processOrderFromQueue2(Queue &q, int cid, int &idle_time) {
     // 做菜後才逾時 → Timeout
     if (start + front.getDuration() > front.getTimeout()) {
         int delay = start - front.getArrival();
-        idle_time += front.getDuration();
+        idle_time = start + front.getDuration();
         timeOut_orders.push_back(TimeOutOrder(front.getOid(), cid, delay, idle_time));
         total_delay += delay;
         return;
@@ -460,6 +461,7 @@ void taskTwo() {
     while (!q.isEmpty()) {
         processOrderFromQueue(q, idle_time);
     }
+
     OutputFile(1);
 }
 
@@ -470,6 +472,7 @@ void taskTwoMultiChef(int chef_count) {
     }
 
     for (int i = 0; i < total_order; i++) {
+    
         Order &cur = sorted_orders[i];
         //  不合理 → 直接取消 
         if (cur.getDuration() <= 0 || cur.getArrival() + cur.getDuration() > cur.getTimeout()) {
@@ -506,8 +509,8 @@ void taskTwoMultiChef(int chef_count) {
             target = idle_list[0]; // 多個閒置 → 選編號最小
         }
         else {
-            // Case3：沒有閒置廚師 → 選 queue 最短的（且 < 3）
-            int best_len = 999999;
+            // Case3：沒有閒置廚師  選 queue 最短的（且 < 3）
+            int best_len = INT_MAX;
             for (int c = 0; c < chef_count; c++) {
                 int len = chef[c].q.size();
                 if (len < best_len && len < 3) {
@@ -533,13 +536,45 @@ void taskTwoMultiChef(int chef_count) {
             chef[target].idle_time = arrival;
         }
     }
-
+  
     // 處理 queue 中剩餘的訂單 
-    for (int i = 0; i < chef_count; i++) {
-      while (!chef[i].q.isEmpty()) {
-          processOrderFromQueue2(chef[i].q, chef[i].cid, chef[i].idle_time);
+    
+    bool processed;
+
+do {
+    // 建立索引陣列
+    
+    int idx[chef_count];
+    // bubble sort idx，依 idle_time 遞增，idle_time 相同時按 cid 遞增
+    if (chef_count >= 2) {
+      
+      for (int i = 0; i < chef_count; i++) idx[i] = i;
+      for (int i = 0; i < chef_count - 1; i++) {
+          for (int j = 0; j < chef_count - 1 - i; j++) {
+              int a = idx[j], b = idx[j+1];
+              if (chef[a].idle_time > chef[b].idle_time ||
+                (chef[a].idle_time == chef[b].idle_time && chef[a].cid > chef[b].cid)) {
+                  int temp = idx[j];
+                  idx[j] = idx[j+1];
+                  idx[j+1] = temp;
+              }
+          }
       }
     }
+    // 找第一個可以處理的 chef（idle_time 最小且 queue 不空）
+    processed = false;
+    for (int i = 0; i < chef_count; i++) {
+        int c = idx[i];
+        // 如果需要考慮 arrival 時間，打開 idle_time <= arrival
+        if (!chef[c].q.isEmpty()) {
+            processOrderFromQueue2(chef[c].q, chef[c].cid, chef[c].idle_time);
+            processed = true;
+            break; // 做完一單後重新排序
+        }
+    }
+
+} while (processed);
+    
     OutputFile(chef_count);
 }
 
@@ -606,7 +641,11 @@ int main() {
       std::cout << "Input the number of queues: ";
       int num;
       std::cin >> num;
-      list.taskTwoMultiChef(num);
+      if (num == 1) {
+        list.taskTwo();
+      } else {
+        list.taskTwoMultiChef(num);
+      }
       list.ResetCancel();
     } else {
       printf("\n");
