@@ -9,510 +9,175 @@
 void PrintTitle();
 void SkipSpace(std::string &str);
 std::string ReadInput();
-class Order {
- private:
-  int oid;
-  int arrival;
-  int duration;
-  int timeout;
- public:
-  Order() {}
-  ~Order() {}
- void setOrder(int oid, int arrival, int duration, int timeout) {
-   this->oid = oid;
-   this->arrival = arrival;
-   this->duration = duration;
-   this->timeout = timeout; 
- }
-int getOid() {
-   return oid;
- }
- int getArrival() {
-   return arrival;
- }
- int getDuration() {
-   return duration;
- }
- int getTimeout() {
-   return timeout;
- }
 
- void print() {
-    std::cout << "\t" << oid
-              << "\t" << arrival
-              << "\t" << duration
-              << "\t" << timeout << std::endl;
-    }
+struct Node {
+    int data;
+    Node* left;
+    Node* right;
+
+    Node(int val) : data(val), left(nullptr), right(nullptr) {}
 };
 
-class AbortOrder {
- private:
-  int oid;
-  int cid = 0;
-  int delay;
-  int abort;
+class BinarySearchTreeIterative {
+private:
+    Node* root;
+
 public:
- AbortOrder(int oid, int cid, int delay, int abort) {
-   this->oid = oid;
-   this->cid = cid;
-   this->delay = delay;
-   this->abort = abort;
- }
- ~AbortOrder() {}
- void setOrder(int oid, int cid, int delay, int abort) {
-   this->oid = oid;
-   this->cid = cid;
-   this->delay = delay;
-   this->abort = abort; 
- }
-int getOid() {
-   return oid;
- }
- int getCid() {
-   return cid;
- }
- int getDelay() {
-   return delay;
- }
- int getAbort() {
-   return abort;
- }
-};
+    BinarySearchTreeIterative() : root(nullptr) {}
 
-class TimeOutOrder {
- private:
-  int oid;
-  int cid = 0;
-  int delay;
-  int departure;
-public:
- TimeOutOrder(int oid, int cid, int delay, int departure) {
-    this->oid = oid;
-    this->cid = cid;
-    this->delay = delay;
-    this->departure = departure;
- }
-
- ~TimeOutOrder() {}
- void setOrder(int oid, int cid, int delay, int departure) {
-   this->oid = oid;
-   this->cid = cid;
-   this->delay = delay;
-   this->departure = departure; 
- }
-int getOid() {
-   return oid;
- }
- int getCid() {
-   return cid;
- }
- int getDelay() {
-   return delay;
- }
- int getDeparture() {
-   return departure;
- }
-};
-
-class Queue {
- private: 
-  struct QueueNode {
-   Order order_item;
-   QueueNode *next;
-  }; // end QueueNode
-  QueueNode *backPtr;
-  QueueNode *frontPtr;
- public: 
-  Queue(); // Constructors and destructor
-  Queue(const Queue& Q);
-  ~Queue();
-  bool isEmpty() const; // Queue operations
-  void enqueue(const Order& newItem);
-  void dequeue();
-  void dequeue(Order& queueFront);
-  void getFront(Order& queueFront) const;
-  int size();
-}; 
-
-struct Chef {
-    Queue q;
-    int cid;
-    int idle_time = 0;
-};
-
-
-
-
-class Goods {
- private:
-  std::vector<Order> orders;
-  std::string title;
-  int total_order = 0;
-  
-  std::string filNum;
-  long long writing_data_time = 0;
-  long long sorting_data_time = 0;
-  long long reading_data_time = 0;
- public:
-  Goods(){};
-  ~Goods(){};
-  void ResetGoods() {
-    total_order = 0;
-    orders.clear();
-    orders.shrink_to_fit();
-    title = "";
-  }
-  void addOrder(const Order& o) {
-    orders.push_back(o);
-    total_order += 1;
-  }
-
-  bool fetchFile() {
-    auto start = std::chrono::high_resolution_clock::now();
-    std::ifstream in;
-    std:: cout << "Input a file number (e.g., 401, 402, 403, ...): ";
-    std::string file_num = ReadInput();
-    std::string txt_path = "input" + file_num + ".txt";
-    in.open(txt_path);
-    if(in.fail()){ 
-      std::cout << std::endl << "### " << txt_path + " does not exist! ###" << std::endl;
-      return false; 
-    }
-    filNum = file_num;
-    while (title.empty()) {
-      title.clear();
-      if (!(in >> title) ) {
-         std::cout << std::endl << "### Get nothing from " << txt_path + " ! ###" << std::endl;
-        return false;
-      }
-      std::getline(in, title);
-    }
-    
-    int oid, arrival, duration, timeout;
-    while (in >> oid >> arrival >> duration >> timeout) {
-      Order o;
-      o.setOrder(oid, arrival, duration, timeout);
-      orders.push_back(o);
-      total_order++;
-    }       
-    in.close();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    reading_data_time = time.count();
-    return true;
-  }
-
-  void ShellSort() { // 先 Arrival 再 OID
-    auto start = std::chrono::high_resolution_clock::now();
-    int gap = total_order / 2;
-
-    for (; gap > 0; gap /= 2) {
-        for (int i = gap; i < total_order; i++) {
-            Order tmp = orders[i];
-            int j = i;
-
-            // 雙重比較：先 Arrival，再 OID
-            while (j >= gap && 
-              (tmp.getArrival() < orders[j - gap].getArrival() ||
-              (tmp.getArrival() == orders[j - gap].getArrival() && tmp.getOid() < orders[j - gap].getOid()))) 
-            {
-                orders[j] = orders[j - gap];
-                j -= gap;
-            }
-
-            orders[j] = tmp;
-        }
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    sorting_data_time = time.count();
-}
-
-
-
-  void OutputFile() {
-    auto start = std::chrono::high_resolution_clock::now();
-    std::string sorting_path = "sorted" + filNum + ".txt";
-     std::ofstream outputFile(sorting_path);
-     outputFile <<"OID\tArrival\tDuration\tTimeOut\n";
-     for (int i = 0; i < total_order; i++) {
-       outputFile << orders[i].getOid() << "\t" ;
-       outputFile << orders[i].getArrival() << "\t" ;
-       outputFile << orders[i].getDuration() << "\t" ;
-       outputFile << orders[i].getTimeout() << "\n";
-     }
-     auto end = std::chrono::high_resolution_clock::now();
-     auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-     writing_data_time = time.count();
-
-  }
-
-  void printOrders() {
-        std::cout << "\tOID\tArrival\tDuration\tTimeOut" << std::endl;
-        for (int i = 0; i < total_order; i++) {
-          std::cout << "(" << i+1 << ") ";
-          orders[i].print();
-        }
-  }
-
-  void taskOne() {
-    printf("\n");
-    printOrders();
-    printf("\n");
-    ShellSort();
-    OutputFile();
-    std::cout << "Reading data: " << reading_data_time << " us.\n";
-    printf("\n");
-    std::cout << "Sorting data: " << sorting_data_time << " us.\n";
-    printf("\n");
-    std::cout << "Writing data: " << writing_data_time << " us.\n";
-
-  }
-};
-
-class CancelList {
- private:
-  std::vector<Order> sorted_orders;
-  std::vector<AbortOrder> abort_orders; 
-  std::vector<TimeOutOrder> timeOut_orders;
-  std::string filNum;
-  std::string title;
-  int total_order = 0;
-  int total_delay = 0;
- public:
-  CancelList () {}
-  ~CancelList () {
-    total_order = 0;
-    sorted_orders.clear();
-    sorted_orders.shrink_to_fit();
-  }
-  void ResetSorted() {
-    sorted_orders.clear();
-    sorted_orders.shrink_to_fit();
-    total_order = 0;
-
-  }
-
-  void ResetCancel() {
-    total_delay = 0;
-    abort_orders.clear();
-    abort_orders.shrink_to_fit();
-
-    timeOut_orders.clear();
-    timeOut_orders.shrink_to_fit();
-
-  }
-  bool fetchFile() {
-    std::ifstream in;
-    std:: cout << "Input a file number (e.g., 401, 402, 403, ...): ";
-    std::string file_num = ReadInput();
-    std::string txt_path = "sorted" + file_num + ".txt";
-    in.open(txt_path);
-    if(in.fail()){ 
-      std::cout << std::endl << "### " << txt_path + " does not exist! ###" << std::endl;
-      return false; 
-    }
-    filNum = file_num;
-    std::getline(in, title);
-    int oid, arrival, duration, timeout;
-    while (in >> oid >> arrival >> duration >> timeout) {
-      Order o;
-      o.setOrder(oid, arrival, duration, timeout);
-      sorted_orders.push_back(o);
-      total_order++;
-    }       
-    in.close();
-    return true;
-  }
-
-  void OutputFile(int chef_counts) {
-    std::string sorting_path;
-    if (chef_counts == 1) {
-      sorting_path = "one" + filNum + ".txt";
-    } else if (chef_counts == 2) {
-      sorting_path = "two" + filNum + ".txt";
-    } else {
-      sorting_path = "any" + filNum + ".txt";
-    }
-     
-     std::ofstream outputFile(sorting_path);
-     outputFile << std::fixed << std::setprecision(2);
-     outputFile <<  "\t[Abort List]\n";
-     outputFile << "\tOID\tCID\tDelay\tAbort\n";
-     for (int i = 0; i < abort_orders.size(); i++) {
-       outputFile << "[" << i+1 << "]";
-       outputFile << "\t" << abort_orders[i].getOid();
-       outputFile << "\t" << abort_orders[i].getCid();
-       outputFile << "\t" << abort_orders[i].getDelay();
-       outputFile << "\t" << abort_orders[i].getAbort() << "\n";
-     }
-     outputFile <<  "\t[Timeout List]\n";
-     outputFile << "\tOID\tCID\tDelay\tDeparture\n";
-     for (int i = 0; i < timeOut_orders.size(); i++) {
-       outputFile << "[" << i+1 << "]";
-       outputFile << "\t" << timeOut_orders[i].getOid();
-       outputFile << "\t" << timeOut_orders[i].getCid();
-       outputFile << "\t" << timeOut_orders[i].getDelay();
-       outputFile << "\t" << timeOut_orders[i].getDeparture() << "\n";
-     }
-     outputFile <<  "[Total Delay]\n";
-     outputFile << total_delay << " min.\n";
-     outputFile << "[Failure Percentage]\n";
-  
-     double percentage = 100 * (double)(abort_orders.size() + timeOut_orders.size()) / (double)sorted_orders.size() ;
-     outputFile << percentage << " %" << std::endl;
-
-  }
-
- 
-
-  void printOrders() {
-        std::cout << "\t" <<title << std::endl;
-        for (int i = 0; i < total_order; i++) {
-          std::cout << "(" << i+1 << ") ";
-          sorted_orders[i].print();
-        }
-  }
-void processOrder(Chef &chef) {
-    Order front;
-    chef.q.dequeue(front);
-    int start = chef.idle_time;
-    // 取出時逾時 -> Abort 
-    if (front.getTimeout() < start) {
-        int abort_time = start;
-        int delay = abort_time - front.getArrival();
-        abort_orders.push_back(AbortOrder(front.getOid(), chef.cid, delay, abort_time));
-        total_delay += delay;
-        return;
-    }
-    // 做菜後才逾時 -> Timeout
-    if (start + front.getDuration() > front.getTimeout()) {
-        int delay = start - front.getArrival();
-        chef.idle_time = start + front.getDuration();
-        timeOut_orders.push_back(TimeOutOrder(front.getOid(), chef.cid, delay, chef.idle_time));
-        total_delay += delay;
-        return;
-    }
-
-    // 正常完成 
-    chef.idle_time += front.getDuration();
-}
-
-void MultiChef(int chef_count) { // for task 2 3 4
-    Chef chef[chef_count];
-    for (int i = 0; i < chef_count; i++) {
-      chef[i].cid = i+1;
-    }
-
-    for (int i = 0; i < total_order; i++) {
-        
-    
-        Order &cur = sorted_orders[i];
-        //  不合理  直接取消 delete from vector 
-        if (cur.getDuration() <= 0 || cur.getArrival() + cur.getDuration() > cur.getTimeout()) {
-            sorted_orders.erase(sorted_orders.begin() + i);
-            i--;
-            total_order--;
-            continue;
-        }
-        int arrival = cur.getArrival();
-        //  (Case 1 / Case 2) 找「閒置廚師」 idle <= arrival && queue empty
-
-    
-        for (int i = 0; i < chef_count; i++) {
-          while (!chef[i].q.isEmpty() && chef[i].idle_time <= arrival) {
-            processOrder(chef[i]);
-          }
+    // 1. Iterative Insertion
+    void insert(int val) {
+        Node* newNode = new Node(val);
+        if (root == nullptr) {
+            root = newNode;
+            return;
         }
 
-  // 若廚師空、未達 arrival -> 跳到 arrival 
-        int target = -1;
-        // Case1 / Case2：找 idle_time ≤ arrival 且 queue 空的廚師
-        std::vector<int> idle_list;
-        for (int c = 0; c < chef_count; c++) {
-            if (chef[c].idle_time <= arrival && chef[c].q.size() == 0) {
-                idle_list.push_back(c);
+        Node* current = root;
+        Node* parent = nullptr;
+
+        while (current != nullptr) {
+            parent = current;
+            if (val < current->data) {
+                current = current->left;
+            } else if (val > current->data) {
+                current = current->right;
+            } else {
+                // Value already exists, handle as needed (here we just return)
+                delete newNode; // Avoid memory leak for duplicate
+                return;
             }
         }
 
-        if (idle_list.size() == 1) {
-            target = idle_list[0]; // 唯一閒置
-        } else if (idle_list.size() > 1) {
-            target = idle_list[0]; // 多個閒置 -> 選編號最小
+        // Attach the new node to the correct parent pointer
+        if (val < parent->data) {
+            parent->left = newNode;
         } else {
-            // Case3：沒有閒置廚師  選 queue 最短的（且 < 3）
-            int best_len = INT_MAX;
-            for (int c = 0; c < chef_count; c++) {
-              int len = chef[c].q.size();
-              if (len < best_len && len < 3) {
-                  best_len = len;
-                  target = c;
-              }
-            }
-            // Case4：全部 queue 都滿 -> abort
-            if (target == -1) {
-                abort_orders.push_back(AbortOrder(cur.getOid(), 0, 0, arrival));
-                continue;
-            }
-        }
-        // Step 3：把訂單丟給 target 廚師
-        chef[target].q.enqueue(cur);
-        // 若該廚師是空的而且 idle_time < arrival → 推進時間
-        if (chef[target].q.size() == 1 && chef[target].idle_time < arrival) {
-            chef[target].idle_time = arrival;
+            parent->right = newNode;
         }
     }
-  
-    // 處理 queue 中剩餘的訂單 
-    
-    if (chef_count >= 2) {
-      bool processed;
-      do {
-          // 建立索引陣列
-          int idx[chef_count];
-          // bubble sort idx，依 idle_time 遞增，idle_time 相同時按 cid 遞增
-          for (int i = 0; i < chef_count; i++) idx[i] = i;
-          for (int i = 0; i < chef_count - 1; i++) {
-            for (int j = 0; j < chef_count - 1 - i; j++) {
-              int a = idx[j], b = idx[j+1];
-              if (chef[a].idle_time > chef[b].idle_time ||
-                (chef[a].idle_time == chef[b].idle_time && chef[a].cid > chef[b].cid)) {
-                  int temp = idx[j];
-                  idx[j] = idx[j+1];
-                  idx[j+1] = temp;
-              }
-            }
-          }
-          
-          // 找第一個可以處理的 chef（idle_time 最小且 queue 不空）
-          processed = false;
-          for (int i = 0; i < chef_count; i++) {
-              int c = idx[i];
-              // 如果需要考慮 arrival 時間，打開 idle_time <= arrival
-              if (!chef[c].q.isEmpty()) {
-                  processOrder(chef[c]);
-                  processed = true;
-                  break; // 做完一單後重新排序
-              }
-          }
 
-        } while (processed);
-    } else if (chef_count == 1) {
-      while (!chef[0].q.isEmpty()) {
-        processOrder(chef[0]);
-      }
+    // 2. Iterative Search
+    bool search(int val) {
+        Node* current = root;
+        while (current != nullptr) {
+            if (current->data == val) {
+                return true; // Found the value
+            } else if (val < current->data) {
+                current = current->left;
+            } else {
+                current = current->right;
+            }
+        }
+        return false; // Value not found
     }
 
-      OutputFile(chef_count);
-  }
+    // 3. Iterative In-order Traversal (requires a stack)
+    // This is the most common way to do in-order iteratively
+    void inorder() {
+        if (root == nullptr) return;
 
+        // We use the standard library stack for traversal
+        std::vector<Node*> stack;
+        Node* current = root;
+
+        while (current != nullptr || !stack.empty()) {
+            // Reach the left most Node of the current Node
+            while (current != nullptr) {
+                stack.push_back(current);
+                current = current->left;
+            }
+
+            // Current must be NULL at this point
+            current = stack.back();
+            stack.pop_back();
+
+            std::cout << current->data << " ";
+
+            // We have visited the node and its left subtree. Now, go to the right subtree.
+            current = current->right;
+        }
+        std::cout << std::endl;
+    }
+
+    // 4. Iterative Deletion (More complex, but achievable)
+    // Deletion is significantly more complex without recursion and often left recursive for clarity, 
+    // but a full iterative solution exists. The implementation below handles most cases iteratively.
+    void deleteNode(int val) {
+        Node* parent = nullptr;
+        Node* current = root;
+        bool isLeftChild = false;
+
+        // Find the node to delete and its parent
+        while (current != nullptr && current->data != val) {
+            parent = current;
+            if (val < current->data) {
+                isLeftChild = true;
+                current = current->left;
+            } else {
+                isLeftChild = false;
+                current = current->right;
+            }
+        }
+
+        if (current == nullptr) return; // Value not in BST
+
+        // Case 1: Node to be deleted has no children or one child
+        if (current->left == nullptr || current->right == nullptr) {
+            Node* child = (current->left == nullptr) ? current->right : current->left;
+
+            if (parent == nullptr) { // Deleting the root node
+                root = child;
+            } else if (isLeftChild) {
+                parent->left = child;
+            } else {
+                parent->right = child;
+            }
+            delete current;
+        } 
+        // Case 3: Node to be deleted has two children
+        else {
+            // Find the in-order successor (smallest in the right subtree)
+            Node* successorParent = current;
+            Node* successor = current->right;
+            while (successor->left != nullptr) {
+                successorParent = successor;
+                successor = successor->left;
+            }
+
+            // Copy the successor's data to the current node
+            current->data = successor->data;
+
+            // Delete the successor (which now has at most one child: its original right child)
+            if (successorParent->left == successor) {
+                successorParent->left = successor->right;
+            } else { // If successor was the immediate right child of current
+                successorParent->right = successor->right;
+            }
+            delete successor;
+        }
+    }
+
+
+    // Destructor (Still uses recursion internally to clean up efficiently)
+    ~BinarySearchTreeIterative() {
+        deleteTreeRecursive(root); // Cleanup is hard to do iteratively without extra structures
+    }
+
+private:
+    void deleteTreeRecursive(Node* node) {
+        if (node == nullptr) return;
+        deleteTreeRecursive(node->left);
+        deleteTreeRecursive(node->right);
+        delete node;
+    }
 };
+
+
 
 
 int main() {
-  Goods goods;
-  CancelList list;
+ 
   bool has_command2 = false;
   while (true) {
     PrintTitle();
@@ -576,95 +241,6 @@ int main() {
     }
     printf("\n");  
   }
-}
-
-Queue::Queue() {
-  backPtr = NULL;   
-  frontPtr = NULL;  
-}
-
-Queue::Queue(const Queue& Q) : frontPtr(nullptr), backPtr(nullptr) {
-    QueueNode* curr = Q.frontPtr;
-    while (curr != nullptr) {
-        enqueue(curr->order_item);
-        curr = curr->next;
-    }
-}
-
-Queue::~Queue() {
-  while (!isEmpty()) { 
-    dequeue();
-  }
-}
-
-bool Queue::isEmpty() const{
-   
-  if (backPtr == NULL)
-    return true;
-  else
-   return false;
-}
-
-
-void Queue::enqueue(const Order& newItem){
-    QueueNode* newPtr = new QueueNode;  
-    newPtr->order_item = newItem;              
-    newPtr->next = NULL;                 
-
-    if (isEmpty()) {
-      
-        frontPtr = newPtr;
-    } 
-    else {
-       
-        backPtr->next = newPtr;
-    }
-    backPtr = newPtr; 
-}
-
-void Queue::dequeue() {
-    if (isEmpty())
-        throw std::runtime_error("Queue is empty, cannot dequeue.");
-    else {
-        QueueNode* tempPtr = frontPtr;   // 
-        //  如果佇列裡只有一個節點
-        if (frontPtr == backPtr) {
-            frontPtr = NULL;  
-            backPtr  = NULL;  
-        }
-        else {
-            // 如果有多個節點，就讓前端指向下一個節點
-            frontPtr = frontPtr->next;   
-        }
-        // 安全起見，斷開要刪除節點的連結
-        tempPtr->next = NULL;             
-        // 釋放被刪除的節點記憶體
-        delete tempPtr;                   
-    }
-}
-
-void Queue::getFront(Order& queueFront) const {
-    if (isEmpty())
-        throw std::runtime_error("Queue is empty, cannot dequeue.");
-    queueFront = frontPtr->order_item;
-}
-
-void Queue::dequeue(Order& queueFront){
-    if (isEmpty())
-        throw std::runtime_error("Queue is empty, cannot dequeue.");
-    queueFront = frontPtr->order_item;
-    dequeue();
-} 
-
-int Queue::size() {
-  int count = 0;
-  QueueNode* current = frontPtr;
-  while (current != nullptr) {
-      count++;
-      current = current->next;
-  }
-  return count;
-  
 }
 
 std::string ReadInput() {
