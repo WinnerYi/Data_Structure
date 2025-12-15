@@ -695,12 +695,12 @@ void SkipSpace(std::string &str) {
 
 void PrintTitle () {
   std::cout << "*** (^_^) Data Structure (^o^) ***\n";
-  std::cout << "** Simulate FIFO Queues by SQF ***\n";
-  std::cout << "* 0. Quit                        *\n";
-  std::cout << "* 1. Sort a file                 *\n";
-  std::cout << "* 2. Simulate one FIFO queue     *\n";
-  std::cout << "* 3. Simulate two queues by SQF  *\n";    
-  std::cout << "* 4. Simulate some queues by SQF *\n";
+  std::cout << "** Binary Search Tree on Pokemon *\n";
+  std::cout << "* 0. QUIT                        *\n";
+  std::cout << "* 1. Read a file to build HP BST *\n";
+  std::cout << "* 2. Range search on HP field    *\n";
+  std::cout << "* 3. Delete the min on HP field  *\n";    
+  std::cout << "* 4. Rebuild the balanced HP BST *\n";
   std::cout << "**********************************\n";
   std::cout << "Input a command(0, 1, 2, 3, 4): ";
 } 
